@@ -1,0 +1,11 @@
+This is a reimplementation of Dr. Stefan Kurtz's MUMmer program.  It 
+aims for better quality of code, improved file support, and lower 
+memory usage.
+
+This README file is currently incomplete and will be completed in a 
+future update.
+
+BUILD INSTRUCTIONS:
+make
+
+
