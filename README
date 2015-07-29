@@ -5,6 +5,10 @@ memory usage.
 This README file is currently incomplete and will be completed in a 
 future update.
 
+DEPENDANCIES:
+libfasta
+	can be obtained at https://github.com/dkopecek/libfasta
+
 BUILD INSTRUCTIONS:
 make
 
