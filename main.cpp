@@ -92,7 +92,7 @@
 #include <string.h>
 #include <cerrno>
 #include <libfasta/fasta.h>
-#include <deque>
+#include <suffixarray.h>
 
 #include "strings.h"
 #include "flags.h"
@@ -104,15 +104,12 @@ using namespace std;
  * STRUCTURES***********************************************************
  * ********************************************************************/
 
-typedef struct fastaContainer{
-	FASTA *file;
-	FASTA_rec_t *fasta_record;
-}fastaContainer;
 
 typedef struct globalArgs{
 	int minimumMatchLength;
 	unsigned long flags;
-	deque<fastaContainer> sequences;
+	suffixArrayContainer *sequences;
+	size_t seqCount;
 }globalArgs;
 
 
@@ -120,10 +117,20 @@ typedef struct globalArgs{
 /***********************************************************************
  * HELPER FUNCTIONS*****************************************************
  * ********************************************************************/
+void addRecord(globalArgs *storage, suffixArrayContainer toAdd){
+		storage->seqCount++;
+		storage->sequences = (suffixArrayContainer*) realloc(storage->sequences, 
+											sizeof(suffixArrayContainer) * storage->seqCount);
+		memcpy(&storage->sequences[storage->seqCount - 1], &toAdd, sizeof(suffixArrayContainer));
+}
+
+
 void verifyInput(int argc, char** argv){
 	int i, toIgnore;
 	unsigned long flags;
+	bool dataToProcess;
 
+	dataToProcess = false;
 	flags = 0;
 	i = 0;
 	
@@ -168,12 +175,13 @@ void verifyInput(int argc, char** argv){
 				continue;
 			}
 
+			dataToProcess = true;
 			fasta_rec_free(fasta_record);
 			fasta_close(file);
 		}
 	}
 
-	if(flags & HELP_STATEMENT){
+	if(flags & HELP_STATEMENT || !dataToProcess){
 		fprintf(stderr, USAGE_STATEMENT);
 		exit(-errno);
 	}
@@ -184,6 +192,8 @@ globalArgs parseArgs(int argc, char** argv){
 	globalArgs toReturn;
 	int i;
 
+	toReturn.sequences = NULL;
+	toReturn.seqCount = 0;
 	toReturn.minimumMatchLength = DEFAULT_MINIMUM_MATCH_LENGTH;
 	i = 0;
 
@@ -227,10 +237,14 @@ globalArgs parseArgs(int argc, char** argv){
 			//again, but we're not going to check again.  If there's problems
 			//in this segment of code, it's because of extreme instability on
 			//the host system or the libfasta library.
-			fastaContainer inRecord;
-			inRecord.file = fasta_open(argv[i], 0, NULL);
-			inRecord.fasta_record = fasta_read(inRecord.file, NULL, 0, NULL);
-			toReturn.sequences.push_back(inRecord);
+			FASTA *inFile = fasta_open(argv[i], 0, NULL);
+			FASTA_rec_t *tmpFastaRecord;
+			while((tmpFastaRecord = fasta_read(inFile, NULL, 0, NULL)) != NULL){
+				suffixArrayContainer tmp = copySequenceToLocal(makeSuffixArray(tmpFastaRecord->seq_mem, tmpFastaRecord->seq_len));
+				addRecord(&toReturn, tmp);
+				fasta_rec_free(tmpFastaRecord);
+			}
+			fasta_close(inFile);
 		}
 	}
 	return toReturn;
@@ -238,10 +252,9 @@ globalArgs parseArgs(int argc, char** argv){
 
 
 void freeGlobalArgs(globalArgs toFree){
-	size_t endIndex = toFree.sequences.size();
+	size_t endIndex = toFree.seqCount;
 	for(size_t i = 0; i < endIndex; i++){
-		fasta_rec_free(toFree.sequences[i].fasta_record);
-		fasta_close(toFree.sequences[i].file);
+		freeSuffixArray(&(toFree.sequences[i]));
 	}
 }
 
@@ -259,7 +272,12 @@ int main(int argc, char** argv){
 
 	//MAIN LOOP///////////////////////////////////////////////////////////
 
-	
+	for(size_t i = 0; i < processedArgs.seqCount; i++){
+		for(size_t j = 0; j < processedArgs.sequences[i].length; j++){
+			printf("%c", processedArgs.sequences[i].sequence[j]);
+		}
+		printf("\n\n");
+	}
 
 	//CLEANUP/////////////////////////////////////////////////////////////
 	freeGlobalArgs(processedArgs);
