@@ -2,18 +2,22 @@
 
 EXEC = mummer
 
-SOURCE = main.cpp 
+SOURCE = main.cpp
+OBJECTS = main.o
 
-CXXARGS = -g -Wall -pipe -lfasta -lsuffixarray --std=gnu++0x
+CXXARGS = -march=native -O2 -Wall -pipe -lfasta -lsuffixarray -lpthread -D DEBUG
 
 all: $(EXEC)
 
-$(EXEC) : $(SOURCE)
-	g++ $(CXXARGS) $< -o $@
+$(EXEC) : $(OBJECTS)
+	g++ $< $(CXXARGS) -o $@
 
+$(OBJECTS) : $(SOURCE)
+	g++ $< $(CXXARGS) -c -o $@
+	
 
 install : $(EXEC)
 	mv mummer /usr/bin/
 
 clean:
-	rm -f $(EXEC)
+	rm -f $(EXEC) $(OBJECTS)

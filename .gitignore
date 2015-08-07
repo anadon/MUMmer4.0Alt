@@ -1,2 +1,5 @@
 *.o
 mummer
+c1.fa
+c2.fa
+libsuffixarray.*
